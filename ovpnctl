@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# OpenVPN control
+
+if [ $# -lt 2 ]; then
+    echo "Usage: ovpnctl <action> <profile> [additional args...]" >&2
+    exit 1
+fi
+
+action="$1"
+profile="$2"
+shift 2
+
+systemctl "$action" "openvpn-client@$profile" "$@"

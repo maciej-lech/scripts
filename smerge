@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Sublime Merge
+
+flatpak run com.sublimemerge.App "$@"

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Zed Editor
+
+flatpak run dev.zed.Zed "$@"

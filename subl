@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Sublime Text
+
+flatpak run com.sublimetext.three -a "$@"

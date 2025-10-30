@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# TMUX session helper
+
+tmux new-session -A -s "$@"

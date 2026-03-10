@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+    echo "Usage: niri-msg <subcommand>" >&2
+    echo "" >&2
+    echo "Subcommands:" >&2
+    echo "  action    Perform an action" >&2
+    echo "  outputs   Manage outputs" >&2
+    exit 1
+}
+
+action-usage() {
+    echo "Usage: niri-msg action <action>" >&2
+    echo "" >&2
+    echo "Actions:" >&2
+    echo "  focus-workspace-up-align-monitors    Switch workspace up and align other monitors" >&2
+    echo "  focus-workspace-down-align-monitors   Switch workspace down and align other monitors" >&2
+    exit 1
+}
+
+focus-workspace-up-align-monitors() {
+    focus-workspace-align-monitors up
+}
+
+focus-workspace-down-align-monitors() {
+    focus-workspace-align-monitors down
+}
+
+focus-workspace-align-monitors() {
+    local direction="$1"
+
+    # Switch the focused workspace
+    niri msg action "focus-workspace-${direction}"
+
+    # Get new workspace state
+    local workspaces
+    workspaces=$(niri msg -j workspaces)
+
+    local focused_output target_idx
+    focused_output=$(echo "$workspaces" | jq -r '[.[] | select(.is_focused)] | .[0].output')
+    target_idx=$(echo "$workspaces" | jq '[.[] | select(.is_focused)] | .[0].idx')
+
+    # Find other outputs that have a workspace with target_idx but aren't already showing it
+    local other_outputs
+    other_outputs=$(echo "$workspaces" | jq -r \
+        ".[] | select(.output != \"$focused_output\" and .idx == $target_idx and (.is_active | not)) | .output" \
+        | sort -u)
+
+    if [[ -z "$other_outputs" ]]; then
+        return
+    fi
+
+    for output in $other_outputs; do
+        niri msg action focus-monitor "$output"
+        niri msg action focus-workspace "$target_idx"
+    done
+
+    # Focus back to original output
+    niri msg action focus-monitor "$focused_output"
+}
+
+outputs-usage() {
+    echo "Usage: niri-msg outputs <action>" >&2
+    echo "" >&2
+    echo "Actions:" >&2
+    echo "  fallback-profile   Fall back to Laptop profile if no external monitors are connected" >&2
+    exit 1
+}
+
+outputs-fallback-profile() {
+    if ! niri msg outputs | grep -q "Dell Inc\."; then
+        dms ipc outputs setProfile Laptop
+    fi
+}
+
+outputs() {
+    case "${1:-}" in
+        fallback-profile)
+            outputs-fallback-profile
+            ;;
+        *)
+            outputs-usage
+            ;;
+    esac
+}
+
+action() {
+    case "${1:-}" in
+        focus-workspace-up-align-monitors)
+            focus-workspace-up-align-monitors
+            ;;
+        focus-workspace-down-align-monitors)
+            focus-workspace-down-align-monitors
+            ;;
+        *)
+            action-usage
+            ;;
+    esac
+}
+
+case "${1:-}" in
+    action)
+        action "${2:-}"
+        ;;
+    outputs)
+        outputs "${2:-}"
+        ;;
+    *)
+        usage
+        ;;
+esac
